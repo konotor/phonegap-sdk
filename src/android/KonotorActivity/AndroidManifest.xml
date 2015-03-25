@@ -15,17 +15,17 @@
   	<!-- Needed by Google GCM -->
   	<uses-permission android:name="android.permission.GET_ACCOUNTS" />
 	<!-- Keeps the processor from sleeping when a message is received. -->
-	<uses-permission android:name="android.permission.WAKE_LOCK" />
+	<uses-permission android:name="android.permission.WAKE_LOCK" />    
 
   	<!-- GCM requires a minimum version SDK of 8. Voice needs version 10 -->
-
+  	
     <application>
     	<activity android:name="com.demach.konotor.KonotorFeedbackActivity"
     	    android:screenOrientation="portrait"
     	    ></activity>
     	<activity android:name="com.demach.konotor.KonotorPhotoViewActivity"
     	    android:screenOrientation="portrait"
-    	    ></activity>
+    	    ></activity>    	
     	<service android:name=".konotor.service.KonotorService"></service>
     	<service android:name=".konotor.service.KonotorBacklogService"></service>
     	<receiver android:name=".konotor.KonotorAlarmReceiver"></receiver>
@@ -35,5 +35,5 @@
             </intent-filter>
     	</receiver>
     </application>
-
+    
 </manifest>

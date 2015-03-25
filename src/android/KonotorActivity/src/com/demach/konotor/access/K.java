@@ -34,26 +34,26 @@ public class K
         public static int unread_background_drawable=R.drawable.konotor_unread_background_drawable;
         public static int voice_feedback_drawable = R.drawable.konotor_voice_feedback_drawable;
         public static int chat = R.drawable.konotor_chat;
-
+        
         public static int upload = R.drawable.konotor_upload;
         public static int tick = R.drawable.konotor_tick;
-
+        
        //added for Picture messages
         public static int arrow_down=R.drawable.konotor_arrow_down;
         public static int arrow_up=R.drawable.konotor_arrow_up;
         public static int camera_light=R.drawable.konotor_camera_light;
         public static int content_picture=R.drawable.konotor_img;
-
+ 
 /* ThemeColor related - Commented to work on later - to use withThemeColor option for customizing Konotor color
-
+        
         public static int voiceButton=R.drawable.konotor_voice_overlay_recordbg;
         public static int sendButton = R.drawable.konotor_voice_overlay_sendbg;
         public static int cancelButton = R.drawable.konotor_voice_overlay_cancelbg;
         public static int progressBar = R.drawable.konotor_voice_feedback_drawable;
-
+        
         */
-
-
+        
+        
     }
     public static final class id {
         public static int cancel_recording_bt=R.id.konotor_cancel_recording_bt;
@@ -92,8 +92,9 @@ public class K
         public static int voice_feedback_progress=R.id.konotor_voice_feedback_progress;
         public static int message_subject_text=R.id.konotor_message_subject_text;
         public static int upload_status = R.id.konotor_upload_status;
-
-
+        public static int message_link = R.id.konotor_dl_button;
+        
+        
         //added for Picture messages
         public static int iv_icon=R.id.konotor_iv_icon;
         public static int pic_selection_image=R.id.konotor_pic_selection_image;
@@ -109,9 +110,9 @@ public class K
         public static int arrow_down=R.id.konotor_arrow_down;
         public static int photo_view=R.id.konotor_photo_view;
         public static int message_p_back_bt=R.id.konotor_message_p_back_bt;
-
+                
         public static int nav_p_relative_loyout= R.id.konotor_nav_p_relative_layout;
-
+        
 
     }
     public static final class layout {
@@ -121,7 +122,7 @@ public class K
         public static int toast_layout = R.layout.konotor_toast_layout;
         public static int voice_feedback = R.layout.konotor_voice_feedback;
         public static int user_name_layout = R.layout.konotor_user_name_layout;
-
+        
         //added for Picture messages
         public static int popup_horizontal=R.layout.konotor_popup_horizontal;
         public static int popup_vertical=R.layout.konotor_popup_vertical;
@@ -149,24 +150,24 @@ public class K
         public static int you=R.string.konotor_you;
     }
     public static final class style {
-        /**
+        /** 
         Base application theme, dependent on API level. This theme is replaced
         by AppBaseTheme from res/values-vXX/styles.xml on newer devices.
-
+    
 
             Theme customizations available in newer API levels can go in
             res/values-vXX/styles.xml, while customizations related to
             backward-compatibility can go here.
-
+        
          */
         public static int AppBaseTheme=R.style.AppBaseTheme;
-        /**  Application theme.
- All customizations that are NOT specific to a particular API-level can go here.
+        /**  Application theme. 
+ All customizations that are NOT specific to a particular API-level can go here. 
          */
         public static int AppTheme=R.style.AppTheme;
-
+        
         //added for Picture messages
-
+        
         public static int Animations_PopDownMenu=R.style.KonotorAnimations_PopDownMenu;
         public static int Animations_PopDownMenu_Center=R.style.KonotorAnimations_PopDownMenu_Center;
         public static int Animations_PopDownMenu_Left=R.style.KonotorAnimations_PopDownMenu_Left;
@@ -177,12 +178,12 @@ public class K
         public static int Animations_PopUpMenu_Right=R.style.KonotorAnimations_PopUpMenu_Right;
         public static int Animations_PopUpMenu_Reflect=R.style.KonotorAnimations_PopUpMenu_Reflect;
         public static int Animations_PopDownMenu_Reflect=R.style.KonotorAnimations_PopDownMenu_Reflect;
-
+        
     }
-
+    
     public static final class raw {
         public static int roboto_light = R.raw.roboto_light;
     }
-
+    
     public static final String ANDROID_PROJECT_SENDER_ID = "114180086868";
 }
