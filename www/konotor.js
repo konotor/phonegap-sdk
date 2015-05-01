@@ -80,12 +80,12 @@ module.exports = {
     },
 
     getUnreadCount:function(){
-        updateUnreadCount();
+        module.exports.updateUnreadCount();
         return Konotor_unreadCountValue;
     },
 
     updateUnreadCount:function() {
-        cordova.exec(Konotor.setUnreadCount, null, "KonotorPhoneGap", "updateUnreadCount", []);
+        cordova.exec(module.exports.setUnreadCount, null, "KonotorPhoneGap", "getUnreadCount", []);
     },
 
     setUnreadCount:function(unreadCountParameter){

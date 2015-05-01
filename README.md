@@ -16,6 +16,22 @@ This plugin supports PhoneGap/Cordova apps with version 3.0.0 and above running 
 
 (Note that the Phonegap CLI didn't support --variable before version 3.6.3, so please use the Cordova CLI as shown above in case you're on an older version)
 
-2. Add this script tag to your index.html:
+2. Add onload="onLoad()" to body tag : 
+        
+        <body onload="onLoad()">
+
+3. Add this script tag to your index.html:
 
         <input id="KonotorMenu" type="button" value="Talk To Us" onclick="konotor.launchKonotorScreen();"></input>
+
+4. Include the following script to your index.html 
+        
+        <script type="text/javascript" charset="utf-8">
+            function onLoad() {
+                document.addEventListener("deviceready", onDeviceReady, false);
+            }
+        
+            function onDeviceReady() {
+                konotor.init();
+            }
+        </script>

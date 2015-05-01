@@ -43,28 +43,18 @@ public class KonotorPhoneGap extends CordovaPlugin {
  // private CallbackContext notificationCallback;
 
     protected void pluginInitialize() {
-
-        Context context= this.cordova.getActivity().getApplicationContext();
-
-        int appResId = cordova.getActivity().getResources().getIdentifier("KONOTOR_APP_KEY", "string", cordova.getActivity().getPackageName());
-        String APP_ID = cordova.getActivity().getString(appResId);
-
-        appResId = cordova.getActivity().getResources().getIdentifier("KONOTOR_APP_ID", "string", cordova.getActivity().getPackageName());
-
-        String APP_KEY = cordova.getActivity().getString(appResId);
-
-        Konotor.getInstance(context).init(APP_ID,APP_KEY);
-
+        int appResId = cordova.getActivity().getResources().getIdentifier("KONOTOR_APP_ID", "string", cordova.getActivity().getPackageName());
+        appID = cordova.getActivity().getString(appResId);
+        appResId = cordova.getActivity().getResources().getIdentifier("KONOTOR_APP_KEY", "string", cordova.getActivity().getPackageName());
+        appKey = cordova.getActivity().getString(appResId);
     }
-
 
   @Override
   public boolean execute (String function, JSONArray args,
-                          CallbackContext callbackContext) {
+                          final CallbackContext callbackContext) {
       params = args;
       try{
            if (INIT.equals(function)) {
-                getPreferenceValues(params);
                   cordova.getThreadPool().execute(new Runnable() {
                       public void run() {
                           Konotor.getInstance(cordova.getActivity().getApplicationContext())
@@ -244,9 +234,12 @@ Konotor.getInstance(cordova.getActivity().getApplicationContext()).withNoAudioRe
               }
 
               else if (GET_UNREADCOUNT.equals(function)) {
-
-                  int count=Konotor.getInstance(cordova.getActivity().getApplicationContext()).getUnreadMessageCount();
-                  callbackContext.success(count);
+                    cordova.getThreadPool().execute(new Runnable() {
+                    public void run() {
+                    final int count=Konotor.getInstance(cordova.getActivity().getApplicationContext()).getUnreadMessageCount();
+                            callbackContext.success(count);
+                      }
+                  });
 
                   return true;
 
@@ -263,12 +256,4 @@ Konotor.getInstance(cordova.getActivity().getApplicationContext()).withNoAudioRe
       return false;
       }
   }
-    private void getPreferenceValues(JSONArray paramsPref) {
-        try {
-            appID = paramsPref.getString(0);
-            appKey = paramsPref.getString(1);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-    }
 }
