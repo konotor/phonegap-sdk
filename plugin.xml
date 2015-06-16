@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
-        id="com.konotor.cordova" version="1.0.0">
+        id="cordova-plugin-konotor" version="1.0.0">
     <name>KonotorPhonegapPlugin</name>
     <description>This plugin allows Konotor SDK to be integrated with cordova/phonegap applications</description>
     <keywords>phonegap, cordova, konotor</keywords>
