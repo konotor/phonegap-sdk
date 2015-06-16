@@ -8,11 +8,11 @@ This plugin supports PhoneGap/Cordova apps with version 3.0.0 and above running 
 
 1 a) Install this plugin using PhoneGap/Cordova CLI:
 
-     Cordova 5 and above
+Cordova 5 and above
 
      cordova plugin add cordova-plugin-konotor --variable APP_ID="YOUR_APP_ID" --variable APP_KEY="YOUR_APP_KEY"
 
-     Others
+Others
 
         phonegap plugin add https://github.com/konotor/phonegap-sdk.git --variable APP_ID="YOUR_APP_ID" --variable APP_KEY="YOUR_APP_KEY"
 
