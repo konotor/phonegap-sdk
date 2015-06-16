@@ -4,7 +4,7 @@
 This plugin supports PhoneGap/Cordova apps with version 3.0.0 and above running on iOS and Android.
 
 ## Installation
-#### Automatic Installation using PhoneGap/Cordova CLI(For iOS and Android)
+#### Automatic Installation using PhoneGap/Cordova CLI (for iOS and Android)
 
 1 a) Install this plugin using PhoneGap/Cordova CLI:
 
@@ -22,7 +22,7 @@ Others
 
 (Note that the Phonegap CLI didn't support --variable before version 3.6.3, so please use the Cordova CLI as shown above in case you're on an older version)
 
-1 b) Configure for phonegap build in config.xml
+1 b) Alternately, configure for phonegap build in config.xml
 
     <gap:plugin name="cordova-plugin-konotor" source="npm" version="1.0.0">
         <param name="APP_ID" value="YOUR_APP_ID"/>
