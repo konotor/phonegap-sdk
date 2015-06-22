@@ -179,20 +179,24 @@
     </platform>
 
     <info>
-        Add this script tag to your index.html:
-        &lt;input id="KonotorMenu" type="button" value="Talk To Us" onclick="konotor.launchKonotorScreen();"&gt;&lt;/input&gt;
+1. Add this script tag to your index.html:
+
+        &lt;input id="talkToUs" type="button" value="Talk To Us"&gt;&lt;/input&gt;
+
+2. Add/update your index.js as follows:
+
+   Add the following line in `bindEvents` function
+
+        document.getElementById('talkToUs', addEventListener("click", this.talkToUs));
         
-        Include the following script to your index.html
-        a) Add onload="onLoad()" to body tag : " &lt;body onload="onLoad()"&gt; "
-        
-        b) &lt;script type="text/javascript" charset="utf-8"&gt;
-            function onLoad() {
-                document.addEventListener("deviceready", onDeviceReady, false);
-            }
-                
-            function onDeviceReady() {
-                konotor.init();
-            }
-            &lt;/script&gt;
+   Add the following line in `onDeviceReady` function
+
+        konotor.init();
+
+   Add a `talkToUs` method
+
+        talkToUs: function() {
+            konotor.launchKonotorScreen();
+        }
     </info>
 </plugin>
