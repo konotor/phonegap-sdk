@@ -29,22 +29,22 @@ Others
         <param name="APP_KEY" value="YOUR_APP_KEY"/>
     </gap:plugin>
 
-2. Add onload="onLoad()" to body tag : 
-        
-        <body onload="onLoad()">
+2. Add this script tag to your index.html:
 
-3. Add this script tag to your index.html:
+        <input id="talkToUs" type="button" value="Talk To Us"></input>
 
-        <input id="KonotorMenu" type="button" value="Talk To Us" onclick="konotor.launchKonotorScreen();"></input>
+3. Add/update your index.js as follows:
 
-4. Include the following script to your index.html 
+   Add the following line in `bindEvents` function
+
+        document.getElementById('talkToUs', addEventListener("click", this.talkToUs));
         
-        <script type="text/javascript" charset="utf-8">
-            function onLoad() {
-                document.addEventListener("deviceready", onDeviceReady, false);
-            }
-        
-            function onDeviceReady() {
-                konotor.init();
-            }
-        </script>
+   Add the following line in `onDeviceReady` function
+
+        konotor.init();
+
+   Add a `talkToUs` method
+
+        talkToUs: function() {
+            konotor.launchKonotorScreen();
+        }
