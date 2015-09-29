@@ -31,6 +31,8 @@ static NSTimer* refreshMessagesTimer=nil;
 static int numberOfMessagesShown=KONOTOR_MESSAGESPERPAGE;
 static int loadMore=KONOTOR_MESSAGESPERPAGE;
 
+static BOOL notificationCenterMode=NO;
+
 NSMutableDictionary *messageHeights=nil;
 
 #if KONOTOR_MESSAGE_SHARE_SUPPORT
@@ -73,11 +75,26 @@ NSString* otherName=nil,*userName=nil;
     return self;
 }
 
+- (void) scrollViewWillBeginDragging:(UIScrollView *)scrollView
+{
+    KonotorUIParameters *konotorUIOptions=[KonotorUIParameters sharedInstance];
+    if(konotorUIOptions.dismissesInputOnScroll)
+        [KonotorTextInputOverlay dismissInput];
+}
+
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+
+    [self.tableView setDelegate:self];
+    
     [self.tableView setSeparatorColor:[UIColor clearColor]];
     [Konotor sendAllUnsentMessages];
+    
+    KonotorUIParameters *konotorUIOptions=[KonotorUIParameters sharedInstance];
+    
+    notificationCenterMode=[KonotorUIParameters sharedInstance].notificationCenterMode;
+
 
 #if KONOTOR_MESSAGE_SHARE_SUPPORT
     mailComposer=[[MFMailComposeViewController alloc] init];
@@ -89,7 +106,7 @@ NSString* otherName=nil,*userName=nil;
     
     messages=[Konotor getAllMessagesForDefaultConversation];
     
-    if(![KonotorUIParameters sharedInstance].dontShowLoadingAnimation)
+    if(!(konotorUIOptions.dontShowLoadingAnimation))
         loading=YES;
     else
         loading=NO;
@@ -97,21 +114,21 @@ NSString* otherName=nil,*userName=nil;
         [Konotor DownloadAllMessages];
     
     if(YES){
-        meImage=[[KonotorUIParameters sharedInstance] userProfileImage];
+        meImage=[konotorUIOptions userProfileImage];
         if(meImage==nil) meImage=[UIImage imageNamed:@"konotor_profile.png"];
-        otherImage=[[KonotorUIParameters sharedInstance] otherProfileImage];
+        otherImage=[konotorUIOptions otherProfileImage];
         if(otherImage==nil) otherImage=[UIImage imageNamed:@"konotor_supportprofile.png"];
     }
     sendingImage=[UIImage imageNamed:@"konotor_uploading.png"];
     sentImage=[UIImage imageNamed:@"konotor_sent.png"];
     
-    KONOTOR_MESSAGETEXT_FONT=[[KonotorUIParameters sharedInstance] messageTextFont];
+    KONOTOR_MESSAGETEXT_FONT=[konotorUIOptions messageTextFont];
     if(KONOTOR_MESSAGETEXT_FONT==nil)
         KONOTOR_MESSAGETEXT_FONT=KONOTOR_MESSAGETEXT_FONT_DEFAULT;
     
-    otherName=[[KonotorUIParameters sharedInstance] otherName];
+    otherName=[konotorUIOptions otherName];
     if(!otherName) otherName=@"Support";
-    userName=[[KonotorUIParameters sharedInstance] userName];
+    userName=[konotorUIOptions userName];
     if(!userName) userName=@"You";
     
     // Uncomment the following line to preserve selection between presentations.
@@ -121,30 +138,20 @@ NSString* otherName=nil,*userName=nil;
     // self.navigationItem.rightBarButtonItem = self.editButtonItem;
     // [self.tableView scrollRectToVisible:CGRectMake(0,self.tableView.contentSize.height-50, 2, 50) animated:YES];
     [Konotor MarkAllMessagesAsRead];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"Konotor_FinishedMessagePull" object:nil];
     [self registerForKeyboardNotifications];
     
-    BOOL notificationEnabled=NO;
-    
-#if(__IPHONE_OS_VERSION_MAX_ALLOWED >=80000)
-    if(SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"8.0")){
-        notificationEnabled=[[UIApplication sharedApplication] isRegisteredForRemoteNotifications];
-    }
-    else
-#endif
-    {
-#if (__IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_8_0)
-        UIRemoteNotificationType types = [[UIApplication sharedApplication] enabledRemoteNotificationTypes];
-        if(types != UIRemoteNotificationTypeNone) notificationEnabled=YES;
-#endif
+    if(refreshMessagesTimer){
+        [refreshMessagesTimer invalidate];
+        refreshMessagesTimer=nil;
     }
     
     
-    
-    if (!notificationEnabled) {
-        refreshMessagesTimer=[NSTimer scheduledTimerWithTimeInterval:10 target:[Konotor class] selector:@selector(DownloadAllMessages) userInfo:nil repeats:YES];
+    if(konotorUIOptions.pollingTimeNotOnChatWindow>0){
+        refreshMessagesTimer=[NSTimer scheduledTimerWithTimeInterval:((konotorUIOptions.pollingTimeNotOnChatWindow)>=5?konotorUIOptions.pollingTimeNotOnChatWindow:5)  target:[Konotor class] selector:@selector(DownloadAllMessages) userInfo:nil repeats:YES];
         [refreshMessagesTimer fire];
     }
-
+  
 }
 
 - (void) animateAndDisplayView
@@ -169,7 +176,9 @@ NSString* otherName=nil,*userName=nil;
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
     // Return the number of rows in the section.
-    NSSortDescriptor* desc=[[NSSortDescriptor alloc] initWithKey:@"createdMillis" ascending:YES];
+    KonotorUIParameters *konotorUIOptions=[KonotorUIParameters sharedInstance];
+
+    NSSortDescriptor* desc=[[NSSortDescriptor alloc] initWithKey:@"createdMillis" ascending:!(konotorUIOptions.notificationCenterMode)];
     messages=[[Konotor getAllMessagesForDefaultConversation] sortedArrayUsingDescriptors:[NSArray arrayWithObject:desc]];
     messageCount=(int)[messages count];
     if((numberOfMessagesShown>messageCount)||(messageCount<=KONOTOR_MESSAGESPERPAGE)||((messageCount-numberOfMessagesShown)<3))
@@ -182,7 +191,7 @@ NSString* otherName=nil,*userName=nil;
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    if((loading)&&(indexPath.row==numberOfMessagesShown))
+    if(((!notificationCenterMode)&&(loading)&&(indexPath.row==numberOfMessagesShown))||((notificationCenterMode)&&(loading)&&(indexPath.row==0)))
     {
         static NSString *CellIdentifier = @"KonotorRefreshCell";
         
@@ -215,7 +224,7 @@ NSString* otherName=nil,*userName=nil;
         [cell setBackgroundColor:[UIColor clearColor]];
         return cell;
     }
-    else if((indexPath.row==0)&&(numberOfMessagesShown<messageCount)){
+    else if((indexPath.row==(notificationCenterMode?(numberOfMessagesShown-1):0))&&(numberOfMessagesShown<messageCount)){
         static NSString *CellIdentifier = @"KonotorRefreshCell";
         
         UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
@@ -238,15 +247,25 @@ NSString* otherName=nil,*userName=nil;
         [self performSelector:@selector(refreshView:) withObject:[NSNumber numberWithInt:oldnumber] afterDelay:0];
         return cell;
     }
-    KonotorMessageData* currentMessage=(KonotorMessageData*)[messages objectAtIndex:(messageCount-numberOfMessagesShown+indexPath.row)];
+    KonotorMessageData* currentMessage=(KonotorMessageData*)[messages objectAtIndex:((notificationCenterMode?(loading?-1:0):(messageCount-numberOfMessagesShown))+indexPath.row)];
     
     BOOL isSenderOther=([Konotor isUserMe:currentMessage.messageUserId])?NO:YES;
     BOOL KONOTOR_SHOWPROFILEIMAGE=((!isSenderOther)?([[KonotorUIParameters sharedInstance] userProfileImage]!=nil):([[KonotorUIParameters sharedInstance] otherProfileImage]!=nil));
     BOOL showsProfile=KONOTOR_SHOWPROFILEIMAGE;
     BOOL KONOTOR_SHOW_SENDERNAME=((!isSenderOther)?([[KonotorUIParameters sharedInstance] showUserName]):([[KonotorUIParameters sharedInstance] showOtherName]));
     float profileX=0.0, profileY=0.0, messageContentViewX=0.0, messageContentViewY=0.0, messageTextBoxX=0.0, messageTextBoxY=0.0,messageContentViewWidth=0.0,messageTextBoxWidth=0.0;
+    NSString* customFontName=[[KonotorUIParameters sharedInstance] customFontName];
     
-    
+    if([KonotorUIParameters sharedInstance].notificationCenterMode&&!(isSenderOther)){
+        static NSString *CellIdentifier = @"KonotorBlankCell";
+        
+        UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
+        if(cell==nil){
+            cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
+        }
+        [cell setBackgroundColor:[UIColor clearColor]];
+        return cell;
+    }
     
     messageContentViewWidth = KONOTOR_TEXTMESSAGE_MAXWIDTH;
     if([currentMessage messageType].integerValue==KonotorMessageTypeText){
@@ -263,7 +282,7 @@ NSString* otherName=nil,*userName=nil;
             NSString *strDate = [KonotorConversationViewController stringRepresentationForDate:date];
 
             UITextView* tempView2=[[UITextView alloc] initWithFrame:CGRectMake(0,0,messageContentViewWidth,1000)];
-            [tempView2 setFont:[UIFont fontWithName:@"HelveticaNeue" size:11]];
+            [tempView2 setFont:(customFontName?[UIFont fontWithName:customFontName size:11.0]:[UIFont systemFontOfSize:11.0])];
             [tempView2 setText:strDate];
             CGSize txtTimeSize = [tempView2 sizeThatFits:CGSizeMake(messageContentViewWidth, 50)];
             CGFloat msgWidth = txtSize.width + 16 + 3 * KONOTOR_HORIZONTAL_PADDING;
@@ -334,7 +353,7 @@ NSString* otherName=nil,*userName=nil;
         else
 #endif
             userNameField.contentInset=UIEdgeInsetsMake(-4, 0,-4,0);
-        [userNameField setFont:[UIFont fontWithName:@"HelveticaNeue" size:12]];
+        [userNameField setFont:(customFontName?[UIFont fontWithName:customFontName size:12.0]:[UIFont systemFontOfSize:12.0])];
         [userNameField setBackgroundColor:KONOTOR_MESSAGE_BACKGROUND_COLOR];
         
         [userNameField setTextAlignment:NSTextAlignmentLeft];
@@ -355,7 +374,7 @@ NSString* otherName=nil,*userName=nil;
         [cell.contentView addSubview:userNameField];
         
         UITextView *timeField=[[UITextView alloc] initWithFrame:CGRectMake(messageTextBoxX, messageTextBoxY+((KONOTOR_SHOW_SENDERNAME)?KONOTOR_USERNAMEFIELD_HEIGHT:KONOTOR_VERTICAL_PADDING), messageTextBoxWidth, KONOTOR_TIMEFIELD_HEIGHT)];
-        [timeField setFont:[UIFont fontWithName:@"HelveticaNeue" size:11]];
+        [timeField setFont:(customFontName?[UIFont fontWithName:customFontName size:11.0]:[UIFont systemFontOfSize:11.0])];
         [timeField setBackgroundColor:KONOTOR_MESSAGE_BACKGROUND_COLOR];
         [timeField setTextAlignment:NSTextAlignmentLeft];
         [timeField setTextColor:[UIColor darkGrayColor]];
@@ -372,7 +391,7 @@ NSString* otherName=nil,*userName=nil;
         if(KONOTOR_SHOW_DURATION&&KONOTOR_SHOW_SENDERNAME&&KONOTOR_SHOW_TIMESTAMP)
         {
             UITextView *durationField=[[UITextView alloc] initWithFrame:CGRectMake(messageTextBoxX, messageTextBoxY+((KONOTOR_SHOW_SENDERNAME)?KONOTOR_USERNAMEFIELD_HEIGHT:KONOTOR_VERTICAL_PADDING), messageTextBoxWidth, KONOTOR_TIMEFIELD_HEIGHT)];
-            [durationField setFont:[UIFont fontWithName:@"HelveticaNeue" size:11]];
+            [durationField setFont:(customFontName?[UIFont fontWithName:customFontName size:11.0]:[UIFont systemFontOfSize:11.0])];
             [durationField setBackgroundColor:KONOTOR_MESSAGE_BACKGROUND_COLOR];
             [durationField setTextAlignment:NSTextAlignmentRight];
             [durationField setTextColor:[UIColor darkGrayColor]];
@@ -1050,10 +1069,32 @@ NSString* otherName=nil,*userName=nil;
  - (void) viewWillAppear:(BOOL)animated
 {
     [self.tableView setSeparatorStyle:UITableViewCellSeparatorStyleNone];
+    
+    [super viewWillAppear:animated];
+    
+}
+
+- (void) viewDidAppear:(BOOL)animated
+{
+    [super viewDidAppear:animated];
 }
 
 - (void) viewDidLayoutSubviews{
     [super viewDidLayoutSubviews];
+    
+    if(![Konotor areConversationsDownloading])
+        [Konotor DownloadAllMessages];
+    
+    KonotorUIParameters *konotorUIOptions=[KonotorUIParameters sharedInstance];
+
+    
+    if(refreshMessagesTimer){
+        if(([refreshMessagesTimer isValid])&&([refreshMessagesTimer timeInterval]!=konotorUIOptions.pollingTimeOnChatWindow))
+        {
+            [refreshMessagesTimer invalidate];
+            refreshMessagesTimer=nil;
+        }
+    }
     
     if((refreshMessagesTimer==nil)||(![refreshMessagesTimer isValid])){
         BOOL notificationEnabled=NO;
@@ -1072,14 +1113,17 @@ NSString* otherName=nil,*userName=nil;
         }
         
         
-        if (!notificationEnabled) {
+        
+        if ((!notificationEnabled)||konotorUIOptions.alwaysPollForMessages) {
             if(refreshMessagesTimer)
                 [refreshMessagesTimer invalidate];
-            refreshMessagesTimer=[NSTimer scheduledTimerWithTimeInterval:10 target:[Konotor class] selector:@selector(DownloadAllMessages) userInfo:nil repeats:YES];
+            refreshMessagesTimer=[NSTimer scheduledTimerWithTimeInterval:((konotorUIOptions.pollingTimeOnChatWindow)>=5?konotorUIOptions.pollingTimeOnChatWindow:5)  target:[Konotor class] selector:@selector(DownloadAllMessages) userInfo:nil repeats:YES];
             [refreshMessagesTimer fire];
         }
-
+        
     }
+    [Konotor setDelegate:self];
+    
 }
 
 
@@ -1087,6 +1131,14 @@ NSString* otherName=nil,*userName=nil;
 {
     [refreshMessagesTimer invalidate];
     refreshMessagesTimer=nil;
+    [Konotor setDelegate:[KonotorEventHandler sharedInstance]];
+
+    KonotorUIParameters *konotorUIOptions=[KonotorUIParameters sharedInstance];
+
+    if(konotorUIOptions.pollingTimeNotOnChatWindow>0){
+        refreshMessagesTimer=[NSTimer scheduledTimerWithTimeInterval:((konotorUIOptions.pollingTimeNotOnChatWindow)>=5?konotorUIOptions.pollingTimeNotOnChatWindow:5)  target:[Konotor class] selector:@selector(DownloadAllMessages) userInfo:nil repeats:YES];
+        [refreshMessagesTimer fire];
+    }
     [super viewWillDisappear:animated];
 }
 
@@ -1103,29 +1155,28 @@ NSString* otherName=nil,*userName=nil;
     
 }
 
-// Called when the UIKeyboardDidShowNotification is sent.
-- (void)keyboardWasShown:(NSNotification*)aNotification
+- (void) adjustTableViewWithInset:(float)verticalInset
 {
-    NSDictionary* info = [aNotification userInfo];
-    CGSize keyboardSize = [[info objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue].size;
-    
     UIEdgeInsets contentInsets;
-    float verticalInset=10-([Konotor isPoweredByHidden]?14:0);
+    
     if (UIInterfaceOrientationIsPortrait([[UIApplication sharedApplication] statusBarOrientation])) {
-        contentInsets = UIEdgeInsetsMake(10.0, 0.0, (keyboardSize.height-verticalInset), 0.0);
+        contentInsets = UIEdgeInsetsMake(10.0, 0.0,verticalInset , 0.0);
     } else {
-        contentInsets = UIEdgeInsetsMake(10.0, 0.0, (keyboardSize.height-verticalInset), 0.0);
+        contentInsets = UIEdgeInsetsMake(10.0, 0.0, verticalInset, 0.0);
     }
     
     self.tableView.contentInset = contentInsets;
     self.tableView.scrollIndicatorInsets = contentInsets;
     
     int lastSpot=loading?numberOfMessagesShown:(numberOfMessagesShown-1);
+    
+    if([KonotorUIParameters sharedInstance].notificationCenterMode) lastSpot=0;
+    
     if(lastSpot<0) return;
     NSIndexPath *indexPath=[NSIndexPath indexPathForRow:lastSpot inSection:0];
     
     @try {
-    [self.tableView scrollToRowAtIndexPath:indexPath atScrollPosition:UITableViewScrollPositionBottom animated:NO];
+        [self.tableView scrollToRowAtIndexPath:indexPath atScrollPosition:UITableViewScrollPositionBottom animated:NO];
     }
     @catch (NSException *exception ) {
         indexPath=[NSIndexPath indexPathForRow:(indexPath.row-1) inSection:0];
@@ -1136,6 +1187,23 @@ NSString* otherName=nil,*userName=nil;
             
         }
     }
+
+}
+
+
+// Called when the UIKeyboardDidShowNotification is sent.
+- (void)keyboardWasShown:(NSNotification*)aNotification
+{
+    NSDictionary* info = [aNotification userInfo];
+    CGSize keyboardSize = [[info objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue].size;
+    
+    float adjustHeight=[KonotorFeedbackScreen sharedInstance].conversationViewController.showingInTab?([KonotorFeedbackScreen sharedInstance].conversationViewController.tabBarHeight):0;
+   // if([[self navigationController].tabBarController.viewControllers containsObject:[self navigationController]])
+    keyboardSize.height-=adjustHeight;
+    
+    float verticalInsetAdjustment=10-([Konotor isPoweredByHidden]?14:0);
+    
+    [self adjustTableViewWithInset:(keyboardSize.height-verticalInsetAdjustment)];
 }
 
 // Called when the UIKeyboardWillHideNotification is sent
@@ -1145,6 +1213,9 @@ NSString* otherName=nil,*userName=nil;
     self.tableView.contentInset = contentInsets;
     self.tableView.scrollIndicatorInsets = contentInsets;
     int lastSpot=loading?numberOfMessagesShown:(numberOfMessagesShown-1);
+    
+    if([KonotorUIParameters sharedInstance].notificationCenterMode) lastSpot=0;
+    
     if(lastSpot<0) return;
     NSIndexPath *indexPath=[NSIndexPath indexPathForRow:lastSpot inSection:0];
     @try {
@@ -1164,12 +1235,15 @@ NSString* otherName=nil,*userName=nil;
 
 - (CGFloat) tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    if(indexPath.row==numberOfMessagesShown)
-        return 40;
-    else if((indexPath.row==0)&&(numberOfMessagesShown<messageCount))
-        return 40;
+    notificationCenterMode=[KonotorUIParameters sharedInstance].notificationCenterMode;
 
-    KonotorMessageData* currentMessage=(KonotorMessageData*)[messages objectAtIndex:(messageCount-numberOfMessagesShown+indexPath.row)];
+    if(((!notificationCenterMode)&&(indexPath.row==numberOfMessagesShown))||((notificationCenterMode)&&(indexPath.row==0)&&loading))
+        return 40;
+    else if((indexPath.row==(notificationCenterMode?numberOfMessagesShown:0))&&(numberOfMessagesShown<messageCount))
+        return 40;
+    
+    
+    KonotorMessageData* currentMessage=(KonotorMessageData*)[messages objectAtIndex:((notificationCenterMode?(loading?-1:0):(messageCount-numberOfMessagesShown))+indexPath.row)];
 
     if([messageHeights valueForKey:currentMessage.messageId]!=nil)
     {
@@ -1180,6 +1254,8 @@ NSString* otherName=nil,*userName=nil;
     isSenderOther=([Konotor isUserMe:[currentMessage messageUserId]])?NO:YES;
     BOOL KONOTOR_SHOWPROFILEIMAGE=((!isSenderOther)?([[KonotorUIParameters sharedInstance] userProfileImage]!=nil):([[KonotorUIParameters sharedInstance] otherProfileImage]!=nil));
     BOOL KONOTOR_SHOW_SENDERNAME=((!isSenderOther)?([[KonotorUIParameters sharedInstance] showUserName]):([[KonotorUIParameters sharedInstance] showOtherName]));
+    
+    if([KonotorUIParameters sharedInstance].notificationCenterMode&&(!isSenderOther)) return 0;
     
     float maxTextWidth=KONOTOR_TEXTMESSAGE_MAXWIDTH-KONOTOR_MESSAGE_BACKGROUND_IMAGE_SIDE_PADDING;
     float widthBufferIfNoProfileImage=5*KONOTOR_HORIZONTAL_PADDING;
@@ -1394,6 +1470,9 @@ NSString* otherName=nil,*userName=nil;
     [Konotor MarkAllMessagesAsRead];
     
     int lastSpot=loading?numberOfMessagesShown:(numberOfMessagesShown-1);
+    
+    if([KonotorUIParameters sharedInstance].notificationCenterMode) lastSpot=0;
+    
     if(lastSpot<0) return;
     NSIndexPath *indexPath=[NSIndexPath indexPathForRow:lastSpot inSection:0];
     @try {
@@ -1417,16 +1496,19 @@ NSString* otherName=nil,*userName=nil;
     [self.tableView reloadData];
     [Konotor MarkAllMessagesAsRead];
     
+    notificationCenterMode=[KonotorUIParameters sharedInstance].notificationCenterMode;
+    
     int lastSpot=loading?(numberOfMessagesShown-((NSNumber*)spot).intValue):((numberOfMessagesShown-((NSNumber*)spot).intValue));
+    if(notificationCenterMode) lastSpot=numberOfMessagesShown-lastSpot-1;
     if(lastSpot<0) return;
     NSIndexPath *indexPath=[NSIndexPath indexPathForRow:lastSpot inSection:0];
     @try {
-        [self.tableView scrollToRowAtIndexPath:indexPath atScrollPosition:UITableViewScrollPositionTop animated:NO];
+        [self.tableView scrollToRowAtIndexPath:indexPath atScrollPosition:(notificationCenterMode?UITableViewScrollPositionBottom:UITableViewScrollPositionTop) animated:NO];
     }
     @catch (NSException *exception ) {
         indexPath=[NSIndexPath indexPathForRow:(indexPath.row-1) inSection:0];
         @try{
-            [self.tableView scrollToRowAtIndexPath:indexPath atScrollPosition:UITableViewScrollPositionTop animated:NO];
+            [self.tableView scrollToRowAtIndexPath:indexPath atScrollPosition:(notificationCenterMode?UITableViewScrollPositionBottom:UITableViewScrollPositionTop) animated:NO];
         }
         @catch(NSException *exception){
             
@@ -1447,6 +1529,7 @@ NSString* otherName=nil,*userName=nil;
      */
     if((loading)||([[Konotor getAllMessagesForDefaultConversation] count]>messageCount_prev)){
         loading=NO;
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"Konotor_FinishedMessagePull" object:nil];
         [self refreshView];
     }
     
@@ -1549,25 +1632,51 @@ NSString* otherName=nil,*userName=nil;
     
 }
 
--(BOOL) handleRemoteNotification:(NSDictionary*)userInfo
+-(BOOL) handleRemoteNotification:(NSDictionary*)userInfo withShowScreen:(BOOL) showScreen
 {
-    if(!([(NSString*)[userInfo valueForKey:@"source"] isEqualToString:@"konotor"]))
-        return NO;
-    if(![[KonotorUIParameters sharedInstance] dontShowLoadingAnimation])
-        loading=YES;
-    else
-        loading=NO;
-    [Konotor DownloadAllMessages];
+    NSString* marketingId=((NSString*)[userInfo objectForKey:@"kon_message_marketingid"]);
+    NSString* url=[userInfo valueForKey:@"kon_m_url"];
+    if(showScreen&&marketingId&&([marketingId longLongValue]!=0))
+        [Konotor MarkMarketingMessageAsClicked:[NSNumber numberWithLongLong:[marketingId longLongValue]]];
     
-    [self.tableView reloadData];
-    
+    if(showScreen&&(url!=nil)){
+        @try{
+            NSURL *clickUrl=[NSURL URLWithString:url];
+            if([[UIApplication sharedApplication] canOpenURL:clickUrl]){
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [[UIApplication sharedApplication] openURL:clickUrl];
+                });
+            }
+        }
+        @catch(NSException *e){
+            NSLog(@"%@",e);
+        }
+        
+        [Konotor DownloadAllMessages];
+        
+        return YES;
+    }
+    else{
+        
+        if(!([(NSString*)[userInfo valueForKey:@"source"] isEqualToString:@"konotor"])){
+            return NO;
+        }
+        
+        if(![[KonotorUIParameters sharedInstance] dontShowLoadingAnimation])
+            loading=YES;
+        else
+            loading=NO;
+        [Konotor DownloadAllMessages];
+        
+        [self.tableView reloadData];
+        
+        return YES;
+
+    }
     return YES;
+    
 }
 
--(BOOL) handleRemoteNotification:(NSDictionary*)userInfo withShowScreen:(BOOL)showScreen
-{
-    return [self handleRemoteNotification:userInfo];
-}
 
 - (void) playMedia:(id) sender
 {
@@ -1618,7 +1727,7 @@ NSString* otherName=nil,*userName=nil;
         timeString=[NSDateFormatter localizedStringFromDate:date dateStyle:NSDateFormatterNoStyle timeStyle:NSDateFormatterShortStyle];
     }
     else{
-        if(days>7){
+        if((days>7)||(days<0)){
 #endif
             timeString=[NSDateFormatter localizedStringFromDate:date dateStyle:NSDateFormatterShortStyle timeStyle:NSDateFormatterShortStyle];
 #if KONOTOR_SMART_TIMESTAMP
@@ -1681,7 +1790,11 @@ NSString* otherName=nil,*userName=nil;
     if(button.actionUrl!=nil){
         @try{
             NSURL * actionUrl=[NSURL URLWithString:button.actionUrl];
-            [[UIApplication sharedApplication] openURL:actionUrl];
+            if([[UIApplication sharedApplication] canOpenURL:actionUrl]){
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [[UIApplication sharedApplication] openURL:actionUrl];
+                });
+            }
         }
         @catch(NSException* e){
             NSLog(@"%@",e);
@@ -1716,10 +1829,14 @@ NSString* otherName=nil,*userName=nil;
     float padding = KONOTOR_BUTTON_HORIZONTAL_PADDING*2;
     float maxButtonWidth =messageFrameWidth-horizontalPadding*2;
     
+    UIFont *actionLabelFont=([KonotorUIParameters sharedInstance].customFontName?[UIFont fontWithName:[KonotorUIParameters sharedInstance].customFontName size:16.0]:KONOTOR_BUTTON_FONT);
+
+    
     UITextView* txtView=[[UITextView alloc] init];
-    [txtView setFont:KONOTOR_BUTTON_FONT];
+    [txtView setFont:actionLabelFont];
     [txtView setText:actionLabel];
     CGSize labelSize=[txtView sizeThatFits:CGSizeMake(messageFrameWidth, KONOTOR_ACTIONBUTTON_HEIGHT)];
+    
     
     float labelWidth=padding + 20+labelSize.width;
     float buttonWidth=MAX(MIN(labelWidth, maxButtonWidth), maxButtonWidth*percentWidth);
@@ -1734,7 +1851,10 @@ NSString* otherName=nil,*userName=nil;
                                           buttonWidth,
                                           KONOTOR_ACTIONBUTTON_HEIGHT)];
         [actionButton setHidden:NO];
-        [actionButton setTitle:((actionLabel!=nil)?actionLabel:KONOTOR_BUTTON_DEFAULTACTIONLABEL) forState:UIControlStateNormal];
+        if([actionLabel isEqualToString:@""]||(actionLabel==nil))
+            actionLabel=KONOTOR_BUTTON_DEFAULTACTIONLABEL;
+        [actionButton setAttributedTitle:
+         [[NSAttributedString alloc] initWithString:actionLabel attributes:[NSDictionary dictionaryWithObjectsAndKeys:actionLabelFont,NSFontAttributeName,[UIColor whiteColor],NSForegroundColorAttributeName,nil]] forState:UIControlStateNormal];
     }
     else{
         [actionButton setHidden:YES];

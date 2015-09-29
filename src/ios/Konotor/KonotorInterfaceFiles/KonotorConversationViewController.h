@@ -18,7 +18,7 @@
 #define KONOTOR_IMAGE_INPUT_SUPPORT 1
 #define KONOTOR_MESSAGE_SHARE_SUPPORT 0
 #define KONOTOR_ENABLECAPTIONS 1
-
+#define KONOTOR_ENABLEINPUTCAPTIONS 0
 
 /* DO NOT ALTER - THESE ARE FOR REFERENCE OF DEFAULT VALUES FOR CALLOUT PROVIDED */
 #define KONOTOR_MESSAGE_BACKGROUND_IMAGE_TOP_INSET_DEFAULTCALLOUT 25
@@ -36,10 +36,10 @@
 #define KONOTOR_MESSAGE_BACKGROUND_IMAGE_SIDE_PADDING_IMESSAGE 10
 /* END OF DEFAULT SECTION */
 
-#define KONOTOR_MESSAGETEXT_FONT_DEFAULT ([UIFont fontWithName:@"HelveticaNeue-Light" size:16.0])
+#define KONOTOR_MESSAGETEXT_FONT_DEFAULT ([UIFont systemFontOfSize:16.0])
 #define KONOTOR_BUTTON_DEFAULTACTIONLABEL @"View"
 #define KONOTOR_BUTTON_HORIZONTAL_PADDING 16
-#define KONOTOR_BUTTON_FONT ([UIFont fontWithName:@"HelveticaNeue" size:16.0])
+#define KONOTOR_BUTTON_FONT ([UIFont systemFontOfSize:16.0])
 
 #define KONOTOR_IMAGE_SUPPORT 1
 
@@ -139,6 +139,8 @@
 
 - (void) refreshView;
 - (void) dismissImageView;
+- (void) adjustTableViewWithInset:(float)verticalInset;
+
 @property (strong,nonatomic) KonotorImageView* fullImageView;
 
 @end
